@@ -1315,90 +1315,70 @@ void readData()
 }
 #endif
 
-#if 1
+#if 0
 #include "opencv2/opencv.hpp"
 #include <iostream>
-
 using namespace cv;
 using namespace std;
-
 void mask_setTo();
 void mask_copyTo();
 void time_inverse();
-void useful_func();
-
-int main(void)
-{
-	mask_setTo();
+int main() {
+	//mask_setTo();
 	mask_copyTo();
-	time_inverse();
-	useful_func();
-
+	//time_inverse();
+	//useful_func();
 	return 0;
 }
-
-void mask_setTo()
-{
-	Mat src = imread("lenna.bmp", IMREAD_COLOR);
-	Mat mask = imread("mask_smile.bmp", IMREAD_GRAYSCALE);
-
-	if (src.empty() || mask.empty()) {
-		cerr << "Image load failed!" << endl;
-		return;
-	}
-
-	src.setTo(Scalar(0, 255, 255), mask);
-
-	imshow("src", src);
-	imshow("mask", mask);
-
-	waitKey();
-	destroyAllWindows();
-}
-
-void mask_copyTo()
-{
-	Mat src = imread("airplane.bmp", IMREAD_COLOR);
-	Mat mask = imread("mask_plane.bmp", IMREAD_GRAYSCALE);
-	Mat dst = imread("field.bmp", IMREAD_COLOR);
-
-	if (src.empty() || mask.empty() || dst.empty()) {
-		cerr << "Image load failed!" << endl;
-		return;
-	}
-
-	src.copyTo(dst, mask);
-
-	imshow("src", src);
-	imshow("dst", dst);
-	imshow("mask", mask);
-
-	waitKey();
-	destroyAllWindows();
-}
-
 void time_inverse()
 {
 	Mat src = imread("lenna.bmp", IMREAD_GRAYSCALE);
-
 	if (src.empty()) {
-		cerr << "Image load failed!" << endl;
+		cerr << "image load failed!" << endl;
 		return;
 	}
-
 	Mat dst(src.rows, src.cols, src.type());
-
 	TickMeter tm;
 	tm.start();
-
 	for (int j = 0; j < src.rows; j++) {
 		for (int i = 0; i < src.cols; i++) {
 			dst.at<uchar>(j, i) = 255 - src.at<uchar>(j, i);
 		}
 	}
-
 	tm.stop();
-	cout << "Image inverse took " << tm.getTimeMilli() << "ms." << endl;
+	cout << "image inverse took " << tm.getTimeMilli() << "ms." << endl;
+}
+void mask_copyTo() {
+	Mat src = imread("airplane.bmp", IMREAD_COLOR);
+	Mat mask = imread("mask_plane.bmp", IMREAD_GRAYSCALE);
+	Mat field = imread("field.bmp", IMREAD_COLOR);
+	Mat dst;
+	field.copyTo(dst);
+	if (src.empty() || mask.empty() || dst.empty()) {
+		cerr << "Image load failed!" << endl;
+		return;
+	}
+	src.copyTo(dst, mask);
+	imshow("src", src);
+	imshow("dst", dst);
+	imshow("mask", mask);
+	imshow("field", field);
+	waitKey();
+	destroyAllWindows();
+}
+void mask_setTo()
+{
+	Mat src = imread("lenna.bmp", IMREAD_COLOR);
+	Mat mask = imread("mask_smile.bmp", IMREAD_GRAYSCALE);
+	if (src.empty() || mask.empty()) {
+		cerr << "image load failed!" << endl;
+		return;
+	}
+	src.setTo(Scalar(0, 0, 255), mask);
+	imshow("src", src);
+	imshow("mask", mask);
+	waitKey();
+	destroyAllWindows();
 }
 
 void useful_func()
@@ -1432,5 +1412,202 @@ void useful_func()
 	cout << "cvRound(2.51): " << cvRound(2.51) << endl;
 	cout << "cvRound(3.4999): " << cvRound(3.4999) << endl;
 	cout << "cvRound(3.5): " << cvRound(3.5) << endl;
+}
+#endif
+
+
+#if 0
+#include <opencv2/opencv.hpp>
+#include <iostream>
+#include <opencv2/core/utils/logger.hpp>
+using namespace std;
+using namespace cv;
+void camera_in_video_out();
+int main()
+{
+	utils::logging::setLogLevel(utils::logging::LOG_LEVEL_SILENT);
+	camera_in_video_out();
+	return 0;
+}
+void camera_in_video_out()
+{
+	VideoCapture cap(0);
+	if (!cap.isOpened()) {
+		cerr << "Camera open failed!" << endl;
+		return;
+	}
+	int w = cvRound(cap.get(CAP_PROP_FRAME_WIDTH));
+	int h = cvRound(cap.get(CAP_PROP_FRAME_HEIGHT));
+	double fps = cap.get(CAP_PROP_FPS);
+	cout << "w: " << w << ", h: " << h << ", fps: " << fps << endl;
+	int fourcc = VideoWriter::fourcc('D', 'I', 'V', 'X');
+	// int delay = cvRound(1000 / fps);
+	int delay = 33;
+	VideoWriter outputVideo("output.avi", fourcc, 30, Size(w, h));
+	if (!outputVideo.isOpened()) {
+		cout << "File open failed!" << endl;
+	}
+	Mat frame, inversed;
+	while (true) {
+		cap >> frame;
+		if (frame.empty())
+			break;
+		inversed = ~frame;
+		outputVideo << inversed;
+		imshow("frame", frame);
+		imshow("inversed", inversed);
+		if (waitKey(33) == 27)
+			break;
+	}
+	destroyAllWindows();
+}
+#endif
+
+#if 0
+#include <iostream>
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/core/utils/logger.hpp>
+// cv::Mat gray = function()
+cv::Mat function() {
+	//create image
+	cv::Mat ima(500, 500, CV_8U, 50);
+	return ima;
+}
+int main()
+{
+	cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_SILENT);
+	// create a new image made of 240 row and 320 columns
+	cv::Mat image1(240, 320, CV_8U, 255);	// 100(gray) -> 255(white)
+	// cv::Mat image1(240, 320, CV_8UC3, cv::Scalar(0, 0, 255));
+	cv::imshow("image", image1);
+	cv::waitKey(0);
+	// re-allocate a new image
+	image1.create(200, 200, CV_8U);
+	image1 = 10;
+	cv::imshow("image", image1);
+	cv::waitKey(0);
+	// create a red color image
+	cv::Mat image2(240, 320, CV_8UC3, cv::Scalar(255, 0, 0));
+	cv::imshow("image", image2);
+	cv::waitKey(0);
+	// read in image puppy.bmp
+	cv::Mat image3 = cv::imread("puppy.bmp");
+	cv::Mat image4(image3);
+	image1 = image3;
+	image3.copyTo(image2);
+	cv::Mat image5 = image3.clone();
+	// show the images
+	cv::imshow("Image1", image1);
+	cv::imshow("Image2", image2);
+	cv::imshow("Image3", image3);
+	cv::imshow("Image4", image4);
+	cv::imshow("Image5", image5);
+	cv::waitKey(0);
+	cv::flip(image3, image1, 1);
+	cv::imshow("Image1", image1);
+	cv::imshow("Image2", image2);
+	cv::imshow("Image3", image3);
+	cv::imshow("Image4", image4);
+	cv::imshow("Image5", image5);
+	cv::waitKey(0);
+	// get a gray-level image from a function
+	cv::Mat gray = function();
+	cv::imshow("image", gray);
+	cv::waitKey(0);
+
+	// read the image in gray scale
+	image1 = cv::imread("puppy.bmp", cv::IMREAD_GRAYSCALE);
+
+	// convert the image into a floating point image [0, 1]
+	image1.convertTo(image2, CV_32F, 1 / 255.0, 0.0);
+	cv::imshow("image", image2);
+
+	//matrix
+	cv::Matx33d matrix(3.0, 2.0, 1.0,
+						2.0, 1.0, 3.0,
+						1.0, 2.0, 3.0);
+
+	cv::Matx31d vector(5.0, 1.0, 3.0);
+
+	cv::Matx31d result = matrix * vector;
+	std::cout << result;
+	cv::waitKey(0);
+}
+#endif
+
+#if 0
+#include <iostream>
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/core/utils/logger.hpp>
+int main()
+{
+	cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_SILENT);
+	// define an image window
+	cv::namedWindow("Image");
+	// read the image
+	cv::Mat image = cv::imread("puppy.bmp");
+	// read the logo
+	cv::Mat logo = cv::imread("smalllogo.png");
+	cv::Mat imageROI = cv::Mat(image, cv::Rect(image.cols - logo.cols,
+		image.rows - logo.rows,
+		logo.cols, logo.rows));
+	cv::imshow("Image", image);
+	cv::waitKey();
+	logo.copyTo(imageROI);
+	cv::imshow("Image", image);
+	cv::waitKey();
+
+	image = cv::imread("puppy.bmp");
+	imageROI = image(cv::Rect(image.cols - logo.cols,
+		image.rows - logo.rows,
+		logo.cols, logo.rows));
+	cv::imshow("Image1", logo);
+	cv::Mat mask(logo);
+	cv::waitKey();
+	logo.copyTo(imageROI, mask);
+	cv::imshow("Image", image);
+	cv::waitKey();
+
+	return 0;
+}
+#endif
+#if 1
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/core/utils/logger.hpp>
+void wave(const cv::Mat& image, cv::Mat& result)
+{
+	/*
+	// creating the mapping 좌우 반전
+	for (int i = 0; i < image.rows; i++) {
+		for (int j = 0; j < image.cols; j++) {
+			result.at<uchar>(i, j) = image.at<uchar>(i, image.cols - j - 1);
+		}
+	}
+	*/
+
+	// creating the mapping 상하 반전
+	for (int i = 0; i < image.rows; i++) {
+		for (int j = 0; j < image.cols; j++) {
+			result.at<uchar>(i, j) = image.at<uchar>(image.rows - i - 1, j);
+		}
+	}
+}
+int main()
+{
+	cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_SILENT);
+	cv::Mat image = cv::imread("boldt.jpg", 0);
+	cv::namedWindow("Image");
+	cv::imshow("Image", image);
+	cv::waitKey();
+	// remap image
+	cv::Mat result(image.rows, image.cols, image.type());
+	wave(image, result);
+	cv::namedWindow("Remapped image");
+	cv::imshow("Remapped image", result);
+	cv::waitKey();
 }
 #endif
