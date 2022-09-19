@@ -1144,6 +1144,8 @@ int main(void)
 }
 #endif
 
+
+// 선그리기 !
 #if 0
 #include "opencv2/opencv.hpp"
 #include <iostream>
@@ -1573,7 +1575,9 @@ int main()
 	return 0;
 }
 #endif
-#if 1
+
+
+#if 0
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -1587,15 +1591,38 @@ void wave(const cv::Mat& image, cv::Mat& result)
 			result.at<uchar>(i, j) = image.at<uchar>(i, image.cols - j - 1);
 		}
 	}
-	*/
 
 	// creating the mapping 상하 반전
 	for (int i = 0; i < image.rows; i++) {
 		for (int j = 0; j < image.cols; j++) {
-			result.at<uchar>(i, j) = image.at<uchar>(image.rows - i - 1, j);
+			result.at<uchar>(i, j) = image.at<uchar>(image.rows - i - 1, image.cols - j - 1);
 		}
 	}
+	*/
+
+	// x, y 좌표들을 한줄의 리스트로 표시 해주는 객체
+	// cv::Mat srcX(image.rows, image.cols, CV_8U);
+	// cv::Mat srcY(image.rows, image.cols, CV_8U);
+
+	cv::Mat srcX(image.rows, image.cols, CV_16U);
+	cv::Mat srcY(image.rows, image.cols, CV_16U);
+
+	for (int i = 0; i < image.rows; i++) {
+		for (int j = 0; j < image.cols; j++) {
+			srcX.at<ushort>(i, j) = image.cols - j - 1;
+			srcY.at<ushort>(i, j) = image.rows - i - 1;
+		}
+	}
+
+	for (int i = 0; i < image.rows; i++) {
+		for (int j = 0; j < image.cols; j++) {
+			result.at<uchar>(i, j) = image.at<uchar>(srcY.at<ushort>(i, j), srcX.at<ushort>(i, j));
+		}
+	}
+
 }
+
+
 int main()
 {
 	cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_SILENT);
@@ -1611,3 +1638,453 @@ int main()
 	cv::waitKey();
 }
 #endif
+
+
+// 이미지 flip LR, UD 마우스클릭으로 적용, 이미지 저장 까지
+#if 0
+#include <iostream>
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/core/utils/logger.hpp>
+void onMouse1(int event, int x, int y, int flags, void* param) {
+	// std::cout << "onMouse1 called 확인하기 짜잔" << std::endl;
+	cv::Mat *im = reinterpret_cast<cv::Mat*>(param);
+
+	switch (event) {
+	case cv::EVENT_LBUTTONDOWN:
+		std::cout << "at(" << x << "," << y << ") value is: "
+			<< static_cast<int>(im->at<uchar>(cv::Point(x, y))) << std::endl;
+	}
+}
+
+void onMouse2(int event, int x, int y, int flags, void* param) {
+	// std::cout << "onMouse2 called 확인하기 짜잔" << std::endl;
+	cv::Mat *im = reinterpret_cast<cv::Mat*>(param);
+	cv::Mat *kocain = reinterpret_cast<cv::Mat*>(param);
+	cv::Mat result;
+
+	switch (event) {
+	case cv::EVENT_LBUTTONDOWN:
+		// std::cout << "at(" << x << "," << y << ") value is: "
+		//	<< static_cast<int>(im->at<uchar>(cv::Point(x, y))) << std::endl;
+	
+		cv::flip(*im, result, 1);  // 1이 Left Right
+		*kocain = result;
+		cv::circle(*kocain,
+			cv::Point(155, 110),
+			100,
+			0,
+			3,
+			cv::LINE_AA);
+		cv::imshow("Output Image", *kocain);
+		break;
+	case cv::EVENT_RBUTTONDOWN:
+		// std::cout << "at(" << x << "," << y << ") value is: "
+		//	<< static_cast<int>(im->at<uchar>(cv::Point(x, y))) << std::endl;
+
+		cv::flip(*im, result, 0);  // 0이 Up Down
+		// cv::flip(*im, *im, 0); // 이렇게도 가능하다 주소값만 받아오면 된다.
+		*kocain = result;
+		cv::imshow("Output Image", *kocain);
+		break;
+	case cv::EVENT_MOUSEWHEEL:
+		cv::imwrite("휠누르면 탈출.bmp", *kocain);
+		std::cout << "휠누르면 탈출.bmp 저장 완료" << std::endl;
+		break;
+	}
+}
+
+void onMouse3(int event, int x, int y, int flags, void* param) {
+	cv::Mat *im = reinterpret_cast<cv::Mat*>(param);
+
+	switch (event) {
+	case cv::EVENT_LBUTTONDOWN:
+		cv::circle(*im,
+			cv::Point(155, 110),
+			65,
+			0,
+			3,
+			cv::LINE_AA);
+	}
+	cv::imshow("Drawing on a Image", *im);
+}
+
+int main()
+{
+	cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_SILENT);
+
+	cv::Mat image;
+	std::cout << "This image is " << image.rows << " x " << image.cols << std::endl;
+
+	// read the input image as a gray-scale image
+	image = cv::imread("puppy.bmp", cv::IMREAD_GRAYSCALE);
+
+	if (image.empty()) {
+		std::cout << "Error reading image..." << std::endl;
+		return -1;
+	}
+	std::cout << "This image is " << image.rows << " x " << image.cols << std::endl;
+	std::cout << "This image has " << image.channels() << " channel(s)" << std::endl;
+
+	cv::namedWindow("Original Image");
+	cv::imshow("Original Image", image);
+
+	// set the mouse callback for this image
+	cv::setMouseCallback("Original Image", onMouse1, reinterpret_cast<void*>(&image));
+
+	cv::Mat result;
+	cv::flip(image, result, 1);
+	cv::namedWindow("Output Image");
+	cv::imshow("Output Image", result);
+
+	cv::setMouseCallback("Output Image", onMouse2, reinterpret_cast<void*>(&result));
+
+	/*
+	cv::circle(image,
+		cv::Point(155, 110),
+		65,
+		0,
+		3,
+		cv::LINE_AA);
+	*/
+
+	cv::imshow("Drawing on a Image", image);
+	cv::setMouseCallback("Drawing on a Image", onMouse3, reinterpret_cast<void*>(&image));
+
+	cv::putText(image,
+		"crazy dog, Be Careful!",
+		cv::Point(20, 200),
+		cv::FONT_HERSHEY_PLAIN,
+		1.5,
+		255, 2);
+
+	cv::waitKey(0);
+	//skypwk@hanmail.net
+	//광인사_시각_이름.cpp
+
+	return 0;
+}
+
+#endif
+
+#if 0
+
+#include <opencv2/highgui.hpp>
+#include <iostream>
+
+using namespace std;
+using namespace cv;
+
+
+/*/////////////////////////////////////
+@ function: mouseEvent
+*//////////////////////////////////////
+void mouseEvent(int evt, int x, int y, int flags, void* param)
+{
+	cv::Mat* rgb = (cv::Mat*) param;
+	if (evt == cv::EVENT_LBUTTONDOWN)
+	{
+		printf("%d %d: %d, %d, %d\n",
+			x, y,
+			(int)(*rgb).at<Vec3b>(y, x)[0],
+			(int)(*rgb).at<Vec3b>(y, x)[1],
+			(int)(*rgb).at<Vec3b>(y, x)[2]);
+	}
+}
+
+
+/*/////////////////////////////////////
+@ function: main
+*//////////////////////////////////////
+int main()
+{
+	/// Read image from file
+	cv::Mat img = cv::imread({"puppy.bmp"});
+
+	/// if fail to read the image
+	if (img.empty())
+	{
+		std::cout << "Error loading the image" << std::endl;
+		return -1;
+	}
+
+	/// Create a window
+	cv::namedWindow("My Window", 1);
+
+	/// set the callback function for any mouse event
+	cv::setMouseCallback("My Window", mouseEvent, &img);
+
+	/// show the image
+	cv::imshow("My Window", img);
+
+	/// Wait until user press some key
+	cv::waitKey(0);
+
+	return 0;
+}
+
+
+#endif
+
+
+
+//  7가지 기능 과제
+#if 1
+#include <iostream>
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/core/utils/logger.hpp>
+
+cv::Point ptOld;
+
+void onMouse1(int event, int x, int y, int flags, void* param) {
+	// std::cout << "onMouse1 called 확인하기 짜잔" << std::endl;
+	cv::Mat *im = reinterpret_cast<cv::Mat*>(param);
+	cv::Mat copy = *im;
+	cv::Mat origin = cv::imread("그럼됐네.bmp");
+
+	int b = 0, g = 255, r = 170;
+	static int color_count = 0;
+	switch (event) {
+	case cv::EVENT_LBUTTONDOWN:
+		ptOld = cv::Point(x, y);
+		std::cout << "at(" << x << "," << y << ") value is: "
+			<< static_cast<int>(im->at<uchar>(cv::Point(x, y))) << std::endl;
+		break;
+
+	case cv::EVENT_MBUTTONDOWN:
+		/*
+		if (color_count % 2 == 0) {
+			b = 0, g = 255, r = 170;
+			++color_count;
+		}
+		else {
+			b = 255, g = 0, r = 255;
+			++color_count;
+		}
+		std::cout << b << g << r << std::endl;
+		*/
+		origin.copyTo(copy);
+		cv::resize(origin, origin, cv::Size(480, 280));
+		cv::imshow("Painting & erase", origin);
+		*im = origin;
+
+		break;
+
+	case cv::EVENT_MOUSEMOVE:
+		if (flags & cv::EVENT_FLAG_LBUTTON) {
+			line(*im, ptOld, cv::Point(x, y), cv::Scalar(b, g, r), 3);
+			imshow("Painting & erase", *im);
+			ptOld = cv::Point(x, y);
+		}
+		else if (flags & cv::EVENT_FLAG_RBUTTON) {
+			cv::circle(*im,
+				cv::Point(x, y),
+				20,
+				cv::Scalar(b, g, r),
+				2,
+				cv::LINE_AA);
+			cv::imshow("Painting & erase", *im);
+		}
+		break;
+
+	case cv::EVENT_RBUTTONDOWN:
+		ptOld = cv::Point(x, y);
+		std::cout << "at(" << x << "," << y << ") value is: "
+			<< static_cast<int>(im->at<uchar>(cv::Point(x, y))) << std::endl;
+		break;
+
+
+	}
+
+}
+
+void onMouse2(int event, int x, int y, int flags, void* param) {
+	// std::cout << "onMouse2 called 확인하기 짜잔" << std::endl;
+	cv::Mat *im = reinterpret_cast<cv::Mat*>(param);
+	cv::Mat *kocain = reinterpret_cast<cv::Mat*>(param);
+	cv::Mat result;
+
+	switch (event) {
+	case cv::EVENT_LBUTTONDOWN:
+		// std::cout << "at(" << x << "," << y << ") value is: "
+		//	<< static_cast<int>(im->at<uchar>(cv::Point(x, y))) << std::endl;
+
+		cv::flip(*im, result, 1);  // 1이 Left Right
+		*kocain = result;
+		cv::circle(*kocain,
+			cv::Point(155, 110),
+			100,
+			0,
+			3,
+			cv::LINE_AA);
+		cv::imshow("Output Image", *kocain);
+		break;
+
+	case cv::EVENT_RBUTTONDOWN:
+		// std::cout << "at(" << x << "," << y << ") value is: "
+		//	<< static_cast<int>(im->at<uchar>(cv::Point(x, y))) << std::endl;
+
+		cv::flip(*im, result, 0);  // 0이 Up Down
+		// cv::flip(*im, *im, 0); // 이렇게도 가능하다 주소값만 받아오면 된다.
+		*kocain = result;
+		cv::imshow("Output Image", *kocain);
+		break;
+
+	case cv::EVENT_MOUSEWHEEL:
+		cv::imwrite("휠누르면 탈출.bmp", *kocain);
+		std::cout << "휠누르면 탈출.bmp 저장 완료" << std::endl;
+		break;
+	}
+}
+
+void onMouse3(int event, int x, int y, int flags, void* param) {
+	cv::Mat *im = reinterpret_cast<cv::Mat*>(param);
+	cv::Mat *kocain = reinterpret_cast<cv::Mat*>(param);
+
+	switch (event) {
+	case cv::EVENT_LBUTTONDOWN:
+		cv::circle(*im,
+			cv::Point(x, y),
+			50,
+			0,
+			3,
+			cv::LINE_AA);
+
+		cv::imshow("Drawing on a Image", *im);
+		break;
+
+	case cv::EVENT_RBUTTONDOWN:
+		cv::imshow("Drawing on a Image", *kocain);
+		break;
+	}
+}
+
+void onMouse4(int event, int x, int y, int flags, void* param) {
+	// std::cout << "onMouse1 called 확인하기 짜잔" << std::endl;
+	cv::Mat *im = reinterpret_cast<cv::Mat*>(param);
+	cv::Mat copy = *im;
+	cv::Mat origin = cv::imread("그럼됐네.bmp");
+
+	int b = 0, g = 255, r = 170;
+	static int color_count = 0;
+	switch (event) {
+	case cv::EVENT_LBUTTONDOWN:
+		ptOld = cv::Point(x, y);
+		std::cout << "at(" << x << "," << y << ") value is: "
+			<< static_cast<int>(im->at<uchar>(cv::Point(x, y))) << std::endl;
+		break;
+
+	case cv::EVENT_MBUTTONDOWN:
+		/*
+		if (color_count % 2 == 0) {
+			b = 0, g = 255, r = 170;
+			++color_count;
+		}
+		else {
+			b = 255, g = 0, r = 255;
+			++color_count;
+		}
+		std::cout << b << g << r << std::endl;
+		*/
+		origin.copyTo(copy);
+		cv::resize(origin, origin, cv::Size(480, 280));
+		cv::imshow("Two Color Change", origin);
+		*im = origin;
+		break;
+
+	case cv::EVENT_MOUSEMOVE:
+		if (flags & cv::EVENT_FLAG_LBUTTON) {
+			line(*im, ptOld, cv::Point(x, y), cv::Scalar(255, 0, 0), 3);
+			imshow("Two Color Change", *im);
+			ptOld = cv::Point(x, y);
+		}
+		else if (flags & cv::EVENT_FLAG_RBUTTON) {
+			line(*im, ptOld, cv::Point(x, y), cv::Scalar(0, 0, 255), 3);
+			imshow("Two Color Change", *im);
+			ptOld = cv::Point(x, y);
+		}
+		break;
+
+	case cv::EVENT_RBUTTONDOWN:
+		ptOld = cv::Point(x, y);
+		std::cout << "at(" << x << "," << y << ") value is: "
+			<< static_cast<int>(im->at<uchar>(cv::Point(x, y))) << std::endl;
+		break;
+
+	}
+
+}
+
+int main()
+{
+	cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_SILENT);
+
+	cv::Mat image;
+	std::cout << "This image is " << image.rows << " x " << image.cols << std::endl;
+
+	image = cv::imread("그럼됐네.bmp"); // IMREAD_GRAYSCALE
+
+
+	cv::resize(image, image, cv::Size(480, 280));
+
+	if (image.empty()) {
+		std::cout << "Error reading image..." << std::endl;
+		return -1;
+	}
+	std::cout << "This image is " << image.rows << " x " << image.cols << std::endl;
+	std::cout << "This image has " << image.channels() << " channel(s)" << std::endl;
+
+	cv::namedWindow("Original Image");
+	cv::imshow("Original Image", image);
+
+	// set the mouse callback for this image
+
+	cv::namedWindow("Painting & erase");
+	cv::imshow("Painting & erase", image);
+
+	// set the mouse callback for this image
+	cv::setMouseCallback("Painting & erase", onMouse1, reinterpret_cast<void*>(&image));
+
+	cv::namedWindow("Two Color Change");
+	cv::imshow("Two Color Change", image);
+
+	// set the mouse callback for this image
+	cv::setMouseCallback("Two Color Change", onMouse4, reinterpret_cast<void*>(&image));
+
+	cv::Mat result;
+	cv::flip(image, result, 1);
+	cv::namedWindow("Output Image");
+	cv::imshow("Output Image", result);
+
+	cv::setMouseCallback("Output Image", onMouse2, reinterpret_cast<void*>(&result));
+
+	/*
+	cv::circle(image,
+		cv::Point(155, 110),
+		65,
+		0,
+		3,
+		cv::LINE_AA);
+	*/
+
+	cv::imshow("Drawing on a Image", image);
+	cv::setMouseCallback("Drawing on a Image", onMouse3, reinterpret_cast<void*>(&image));
+
+	cv::putText(image,
+		"crazy dog, Be Careful!",
+		cv::Point(20, 300),
+		cv::FONT_HERSHEY_PLAIN,
+		1.5,
+		255, 2);
+
+	cv::waitKey(0);
+
+	return 0;
+}
+
+#endif
+	//skypwk@hanmail.net
+	//광인사_시각_이름.cpp
